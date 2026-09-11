@@ -21,13 +21,13 @@ class _VastuAppState extends State<VastuApp> {
   int? _draggedPointIndex;
   
   double _manualAngle = 0.0;
-  double _calculatedRotation = 0.0;
-  double _opacity = 0.7;
   
-  // Width aur Height alag kar diye gaye hain
+  // NAYA: Rotation ko 0 se 360 degree control karne ke liye
+  double _chakraRotationDeg = 0.0; 
+  
+  double _opacity = 0.7;
   double _chakraWidth = 250.0;
   double _chakraHeight = 250.0;
-  
   int _activeChakraIndex = 1;
 
   final _nameCtrl = TextEditingController();
@@ -57,7 +57,8 @@ class _VastuAppState extends State<VastuApp> {
       
       setState(() {
         _manualAngle = inputDeg;
-        _calculatedRotation = finalRotationDeg * (math.pi / 180);
+        // Rotation ko 0-360 range mein fix karna
+        _chakraRotationDeg = (finalRotationDeg % 360 + 360) % 360; 
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,7 +71,6 @@ class _VastuAppState extends State<VastuApp> {
     }
   }
 
-  // Chakra ko plot ke andar automatically fit karne ka logic
   void _autoFitToPlot() {
     if (_points.length < 3) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -227,10 +227,10 @@ class _VastuAppState extends State<VastuApp> {
                           width: _chakraWidth,
                           height: _chakraHeight,
                           child: pw.Transform.rotate(
-                            angle: -_calculatedRotation,
+                            angle: -(_chakraRotationDeg * (math.pi / 180)), // PDF Rotation math
                             child: pw.Opacity(
                               opacity: _opacity,
-                              child: pw.Image(chakraPdfImage, fit: pw.BoxFit.fill), // Stretch enable
+                              child: pw.Image(chakraPdfImage, fit: pw.BoxFit.fill), 
                             ),
                           ),
                         ),
@@ -354,10 +354,10 @@ class _VastuAppState extends State<VastuApp> {
                           width: _chakraWidth,
                           height: _chakraHeight,
                           child: Transform.rotate(
-                            angle: _calculatedRotation,
+                            angle: _chakraRotationDeg * (math.pi / 180), // App UI Rotation math
                             child: Opacity(
                               opacity: _opacity,
-                              child: Image.asset('assets/chakra$_activeChakraIndex.png', fit: BoxFit.fill), // Stretch enable
+                              child: Image.asset('assets/chakra$_activeChakraIndex.png', fit: BoxFit.fill), 
                             ),
                           ),
                         ),
@@ -370,6 +370,30 @@ class _VastuAppState extends State<VastuApp> {
                 padding: const EdgeInsets.all(15.0),
                 child: Column(
                   children: [
+                    // --- NAYA: MANUAL ROTATION CONTROLS ---
+                    Text('Chakra Rotation: ${_chakraRotationDeg.round()}°', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle, color: Colors.blue),
+                          onPressed: () => setState(() => _chakraRotationDeg = (_chakraRotationDeg - 1 + 360) % 360),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: _chakraRotationDeg, 
+                            min: 0.0, 
+                            max: 360.0,
+                            onChanged: (v) => setState(() => _chakraRotationDeg = v),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle, color: Colors.blue),
+                          onPressed: () => setState(() => _chakraRotationDeg = (_chakraRotationDeg + 1) % 360),
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    
                     const Text('Transparency Slider', style: TextStyle(fontWeight: FontWeight.bold)),
                     Slider(
                       value: _opacity, min: 0.1, max: 1.0,
