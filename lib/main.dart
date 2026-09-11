@@ -23,7 +23,11 @@ class _VastuAppState extends State<VastuApp> {
   double _manualAngle = 0.0;
   double _calculatedRotation = 0.0;
   double _opacity = 0.7;
-  double _chakraSize = 250.0;
+  
+  // Width aur Height alag kar diye gaye hain
+  double _chakraWidth = 250.0;
+  double _chakraHeight = 250.0;
+  
   int _activeChakraIndex = 1;
 
   final _nameCtrl = TextEditingController();
@@ -48,19 +52,53 @@ class _VastuAppState extends State<VastuApp> {
       double dy = _points[1].dy - _points[0].dy;
       double baselineAngle = math.atan2(dy, dx) * (180 / math.pi);
       
+      double facingAngle = baselineAngle + 90.0; 
+      double finalRotationDeg = inputDeg - facingAngle + 180.0;
+      
       setState(() {
         _manualAngle = inputDeg;
-        _calculatedRotation = (inputDeg - baselineAngle) * (math.pi / 180);
+        _calculatedRotation = finalRotationDeg * (math.pi / 180);
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Degree Locked! Chakra adjusted.'))
+        SnackBar(content: Text('Degree $inputDeg Locked! Chakra Aligned.'))
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kam se kam 2 dots lagayein aur degree likhein!'))
+        const SnackBar(content: Text('Pehle Front Line ke 2 dots lagayein!'))
       );
     }
+  }
+
+  // Chakra ko plot ke andar automatically fit karne ka logic
+  void _autoFitToPlot() {
+    if (_points.length < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pehle poore plot ke dots lagayein!'))
+      );
+      return;
+    }
+    
+    double minX = _points[0].dx;
+    double maxX = _points[0].dx;
+    double minY = _points[0].dy;
+    double maxY = _points[0].dy;
+
+    for (var p in _points) {
+      if (p.dx < minX) minX = p.dx;
+      if (p.dx > maxX) maxX = p.dx;
+      if (p.dy < minY) minY = p.dy;
+      if (p.dy > maxY) maxY = p.dy;
+    }
+
+    setState(() {
+      _chakraWidth = (maxX - minX);
+      _chakraHeight = (maxY - minY);
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Grid plot ke size mein fit ho gaya!'))
+    );
   }
 
   void _onTapDown(TapDownDetails details) {
@@ -72,9 +110,7 @@ class _VastuAppState extends State<VastuApp> {
       }
     }
     if (!tappedExisting) {
-      setState(() {
-        _points.add(details.localPosition);
-      });
+      setState(() => _points.add(details.localPosition));
     }
   }
 
@@ -90,29 +126,18 @@ class _VastuAppState extends State<VastuApp> {
 
   void _onPanUpdate(DragUpdateDetails details) {
     if (_draggedPointIndex != null) {
-      setState(() {
-        _points[_draggedPointIndex!] += details.delta;
-      });
+      setState(() => _points[_draggedPointIndex!] += details.delta);
     }
   }
 
-  // TRUE PLOT CENTER
   Offset _getPlotCenter() {
     if (_points.isEmpty) return const Offset(175, 175);
-    
     if (_points.length < 3) {
       double sumX = 0, sumY = 0;
-      for (var p in _points) {
-        sumX += p.dx;
-        sumY += p.dy;
-      }
+      for (var p in _points) { sumX += p.dx; sumY += p.dy; }
       return Offset(sumX / _points.length, sumY / _points.length);
     }
-
-    double area = 0;
-    double cx = 0;
-    double cy = 0;
-
+    double area = 0, cx = 0, cy = 0;
     for (int i = 0; i < _points.length; i++) {
       int j = (i + 1) % _points.length;
       double crossProduct = (_points[i].dx * _points[j].dy - _points[j].dx * _points[i].dy);
@@ -120,27 +145,17 @@ class _VastuAppState extends State<VastuApp> {
       cx += (_points[i].dx + _points[j].dx) * crossProduct;
       cy += (_points[i].dy + _points[j].dy) * crossProduct;
     }
-
     area /= 2.0;
-
     if (area.abs() < 0.0001) {
       double sumX = 0, sumY = 0;
-      for (var p in _points) {
-        sumX += p.dx;
-        sumY += p.dy;
-      }
+      for (var p in _points) { sumX += p.dx; sumY += p.dy; }
       return Offset(sumX / _points.length, sumY / _points.length);
     }
-
-    cx = cx / (6.0 * area);
-    cy = cy / (6.0 * area);
-
-    return Offset(cx, cy);
+    return Offset(cx / (6.0 * area), cy / (6.0 * area));
   }
 
   Future<void> _generatePdf() async {
     if (_mapImage == null) return;
-    
     showDialog(
       context: context, 
       barrierDismissible: false,
@@ -205,18 +220,17 @@ class _VastuAppState extends State<VastuApp> {
                           }
                         )
                       ),
-                      // FIXED CODE HERE
                       pw.Positioned(
-                        left: center.dx - (_chakraSize / 2),
-                        top: center.dy - (_chakraSize / 2),
+                        left: center.dx - (_chakraWidth / 2),
+                        top: center.dy - (_chakraHeight / 2),
                         child: pw.SizedBox(
-                          width: _chakraSize,
-                          height: _chakraSize,
+                          width: _chakraWidth,
+                          height: _chakraHeight,
                           child: pw.Transform.rotate(
                             angle: -_calculatedRotation,
                             child: pw.Opacity(
                               opacity: _opacity,
-                              child: pw.Image(chakraPdfImage),
+                              child: pw.Image(chakraPdfImage, fit: pw.BoxFit.fill), // Stretch enable
                             ),
                           ),
                         ),
@@ -296,6 +310,11 @@ class _VastuAppState extends State<VastuApp> {
                     children: [
                       ElevatedButton(onPressed: _pickImage, child: const Text('Upload Map')),
                       ElevatedButton(
+                        onPressed: _autoFitToPlot, 
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                        child: const Text('Auto-Fit Plot', style: TextStyle(color: Colors.white)),
+                      ),
+                      ElevatedButton(
                         onPressed: () => setState(() => _points.clear()), 
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                         child: const Text('Clear Dots', style: TextStyle(color: Colors.white)),
@@ -326,25 +345,19 @@ class _VastuAppState extends State<VastuApp> {
                   onPanEnd: (_) => _draggedPointIndex = null,
                   child: Stack(
                     children: [
-                      Positioned.fill(
-                        child: Image.file(_mapImage!, fit: BoxFit.fill),
-                      ),
-                      Positioned.fill(
-                        child: CustomPaint(
-                          painter: PolygonPainter(_points, center),
-                        ),
-                      ),
+                      Positioned.fill(child: Image.file(_mapImage!, fit: BoxFit.fill)),
+                      Positioned.fill(child: CustomPaint(painter: PolygonPainter(_points, center))),
                       if (_points.length >= 3)
                         Positioned(
-                          left: center.dx - (_chakraSize / 2),
-                          top: center.dy - (_chakraSize / 2),
-                          width: _chakraSize,
-                          height: _chakraSize,
+                          left: center.dx - (_chakraWidth / 2),
+                          top: center.dy - (_chakraHeight / 2),
+                          width: _chakraWidth,
+                          height: _chakraHeight,
                           child: Transform.rotate(
                             angle: _calculatedRotation,
                             child: Opacity(
                               opacity: _opacity,
-                              child: Image.asset('assets/chakra$_activeChakraIndex.png', fit: BoxFit.contain),
+                              child: Image.asset('assets/chakra$_activeChakraIndex.png', fit: BoxFit.fill), // Stretch enable
                             ),
                           ),
                         ),
@@ -359,17 +372,18 @@ class _VastuAppState extends State<VastuApp> {
                   children: [
                     const Text('Transparency Slider', style: TextStyle(fontWeight: FontWeight.bold)),
                     Slider(
-                      value: _opacity,
-                      min: 0.1,
-                      max: 1.0,
+                      value: _opacity, min: 0.1, max: 1.0,
                       onChanged: (v) => setState(() => _opacity = v),
                     ),
-                    const Text('Chakra Size (Scale) Slider', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('Chakra Width (X)', style: TextStyle(fontWeight: FontWeight.bold)),
                     Slider(
-                      value: _chakraSize,
-                      min: 100.0,
-                      max: 600.0,
-                      onChanged: (v) => setState(() => _chakraSize = v),
+                      value: _chakraWidth, min: 50.0, max: 600.0,
+                      onChanged: (v) => setState(() => _chakraWidth = v),
+                    ),
+                    const Text('Chakra Height (Y)', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Slider(
+                      value: _chakraHeight, min: 50.0, max: 600.0,
+                      onChanged: (v) => setState(() => _chakraHeight = v),
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
@@ -409,20 +423,12 @@ class PolygonPainter extends CustomPainter {
     for (int i = 1; i < points.length; i++) {
       path.lineTo(points[i].dx, points[i].dy);
     }
-    if (points.length >= 3) {
-      path.close();
-    }
+    if (points.length >= 3) path.close();
     canvas.drawPath(path, pathPaint);
 
-    for (var p in points) {
-      canvas.drawCircle(p, 8, dotPaint);
-    }
-    
-    if (points.length >= 3) {
-      canvas.drawCircle(center, 6, centerPaint);
-    }
+    for (var p in points) canvas.drawCircle(p, 8, dotPaint);
+    if (points.length >= 3) canvas.drawCircle(center, 6, centerPaint);
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
