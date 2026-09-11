@@ -96,11 +96,10 @@ class _VastuAppState extends State<VastuApp> {
     }
   }
 
-  // ✅ TRUE PLOT CENTER (POLYGON CENTROID / BRAHMASTHAN) LOGIC
+  // TRUE PLOT CENTER
   Offset _getPlotCenter() {
     if (_points.isEmpty) return const Offset(175, 175);
     
-    // Agar sirf 1 ya 2 dots hain toh simple average
     if (_points.length < 3) {
       double sumX = 0, sumY = 0;
       for (var p in _points) {
@@ -110,7 +109,6 @@ class _VastuAppState extends State<VastuApp> {
       return Offset(sumX / _points.length, sumY / _points.length);
     }
 
-    // Irregular plot ke liye Center of Gravity (Shoelace Math)
     double area = 0;
     double cx = 0;
     double cy = 0;
@@ -125,7 +123,6 @@ class _VastuAppState extends State<VastuApp> {
 
     area /= 2.0;
 
-    // Agar by chance dots straight line mein hain
     if (area.abs() < 0.0001) {
       double sumX = 0, sumY = 0;
       for (var p in _points) {
@@ -155,7 +152,6 @@ class _VastuAppState extends State<VastuApp> {
     final mapPdfImage = pw.MemoryImage(mapBytes);
     final center = _getPlotCenter();
 
-    // Page 1
     pdf.addPage(
       pw.Page(
         build: (context) => pw.Column(
@@ -175,7 +171,6 @@ class _VastuAppState extends State<VastuApp> {
       ),
     );
 
-    // 7 Pages for Chakras
     for (int i = 1; i <= 7; i++) {
       try {
         final ByteData data = await rootBundle.load('assets/chakra$i.png');
@@ -192,7 +187,6 @@ class _VastuAppState extends State<VastuApp> {
                   child: pw.Stack(
                     children: [
                       pw.Positioned.fill(child: pw.Image(mapPdfImage, fit: pw.BoxFit.fill)),
-                      // Red Plot Outline
                       pw.Positioned.fill(
                         child: pw.CustomPaint(
                           painter: (canvas, size) {
@@ -205,24 +199,25 @@ class _VastuAppState extends State<VastuApp> {
                             canvas.setStrokeColor(PdfColors.red);
                             canvas.setLineWidth(2.0);
                             canvas.strokePath();
-                            // Real Center Dot
                             canvas.drawEllipse(center.dx, size.y - center.dy, 4, 4);
                             canvas.setFillColor(PdfColors.black);
                             canvas.fillPath();
                           }
                         )
                       ),
-                      // Overlay Chakra at calculated True Center
+                      // FIXED CODE HERE
                       pw.Positioned(
                         left: center.dx - (_chakraSize / 2),
                         top: center.dy - (_chakraSize / 2),
-                        width: _chakraSize,
-                        height: _chakraSize,
-                        child: pw.Transform.rotate(
-                          angle: -_calculatedRotation,
-                          child: pw.Opacity(
-                            opacity: _opacity,
-                            child: pw.Image(chakraPdfImage),
+                        child: pw.SizedBox(
+                          width: _chakraSize,
+                          height: _chakraSize,
+                          child: pw.Transform.rotate(
+                            angle: -_calculatedRotation,
+                            child: pw.Opacity(
+                              opacity: _opacity,
+                              child: pw.Image(chakraPdfImage),
+                            ),
                           ),
                         ),
                       ),
@@ -238,7 +233,6 @@ class _VastuAppState extends State<VastuApp> {
       }
     }
 
-    // Last Page
     pdf.addPage(
       pw.Page(
         build: (context) => pw.Center(
@@ -340,7 +334,7 @@ class _VastuAppState extends State<VastuApp> {
                           painter: PolygonPainter(_points, center),
                         ),
                       ),
-                      if (_points.length >= 3) // Jab kam se kam 3 dots ho tabhi chakra dikhega
+                      if (_points.length >= 3)
                         Positioned(
                           left: center.dx - (_chakraSize / 2),
                           top: center.dy - (_chakraSize / 2),
@@ -416,7 +410,7 @@ class PolygonPainter extends CustomPainter {
       path.lineTo(points[i].dx, points[i].dy);
     }
     if (points.length >= 3) {
-      path.close(); // Boundary complete
+      path.close();
     }
     canvas.drawPath(path, pathPaint);
 
@@ -424,7 +418,6 @@ class PolygonPainter extends CustomPainter {
       canvas.drawCircle(p, 8, dotPaint);
     }
     
-    // Real Brahmasthan Center Point (Kala Dot)
     if (points.length >= 3) {
       canvas.drawCircle(center, 6, centerPaint);
     }
