@@ -20,8 +20,8 @@ class _VastuAppState extends State<VastuApp> {
   List<Offset> _points = [];
   int? _draggedPointIndex;
   
-  double _chakraRotationDeg = 0.0; // Gol Chakras ke liye (1,2,3,4)
-  double _gridRotationDeg = 0.0;   // Square Chakras ke liye (5,6,7)
+  double _chakraRotationDeg = 0.0; 
+  double _gridRotationDeg = 0.0;   
   
   double _opacity = 0.7;
   double _chakraWidth = 250.0;
@@ -128,7 +128,6 @@ class _VastuAppState extends State<VastuApp> {
         final ByteData data = await rootBundle.load('assets/chakra$i.png');
         final chakraPdfImage = pw.MemoryImage(data.buffer.asUint8List());
         
-        // Dynamically apply correct rotation based on Chakra type
         double applyRotation = (i >= 5) ? -(_gridRotationDeg * (math.pi / 180)) : -(_chakraRotationDeg * (math.pi / 180));
 
         pdf.addPage(pw.Page(pageFormat: PdfPageFormat.a4, build: (context) {
@@ -140,7 +139,7 @@ class _VastuAppState extends State<VastuApp> {
               for (int p = 1; p < _points.length; p++) canvas.lineTo(_points[p].dx, size.y - _points[p].dy);
               if (_points.length >= 3) canvas.lineTo(_points[0].dx, size.y - _points[0].dy);
               canvas.setStrokeColor(PdfColors.red); canvas.setLineWidth(2.0); canvas.strokePath();
-            }))),
+            })), // Bracket Error fixed here
             pw.Positioned(
               left: center.dx - (_chakraWidth / 2), top: center.dy - (_chakraHeight / 2),
               child: pw.SizedBox(width: _chakraWidth, height: _chakraHeight,
