@@ -25,7 +25,7 @@ jobs:
           channel: 'stable'
 
       - name: Generate Android Files
-        run: flutter create .
+        run: flutter create --project-name vastu_plot_app .
 
       - name: Get Dependencies
         run: flutter pub get
